@@ -1,13 +1,12 @@
 ---
 layout: bt_wiki
-title: Advanced Blueprint Example
+title: Offline manager
 category: Blueprints
 draft: false
 weight: 11000
 
 ---
-# Offline Manager
-Deploying an offline manager is easy using cloyudify. Cloudify manager consists of the manager source code in addition to external components, plugins, modules and agent packages. Creating a file server reachable from the designated managers network and configuring these paths in the inputs file is all the configuring you need.
+Deploying an offline manager is easy using cloudify. Cloudify manager consists of the manager source code in addition to external components, plugins, modules and agent packages. Creating a file server reachable from the designated managers network and configuring these paths in the inputs file is all the configuring you need.
 
 ## The resources
 Frist let us go through the resources and why we actually need them. 
@@ -17,9 +16,11 @@ Some of the resources needed are a part of the manager's core. Without them, dif
 The agent packages are build on a per distro basis. provided with centos7, centos 6.5, Ubuntu trusy, Ubuntu Precise, RHEL and windows, these enable the cloudify agent to run on different distro.
 ### Upload resources
 This sections differes from the others, by functionality. Any resource speicified in this section, is used for the deployments in the deployments process. For example, the hello_world_example imports the following:
+{{< gsHighlight  yaml  >}}
   - http://www.getcloudify.org/spec/cloudify/3.3/types.yaml
   - http://www.getcloudify.org/spec/openstack-plugin/1.3/plugin.yaml
   - http://www.getcloudify.org/spec/diamond-plugin/1.3/plugin.yaml
+{{< /gsHighlight >}}
 
 each import is of yaml type. this enables the parsing of the hello_world blueprint. However, in an offline system these urls are not reachable. To solve this issue, the manager itself actually runs a file server on port 53229. 
 For additional info, please refer to the Upload_resources.
