@@ -6,30 +6,54 @@ draft: false
 weight: 11000
 
 ---
-Deploying an offline manager is easy using cloudify. Cloudify manager consists of the manager source code in addition to external components, plugins, modules and agent packages. Creating a file server reachable from the designated managers network and configuring these paths in the inputs file is all the configuring you need.
+Deploying an offline manager is easy using Cloudify. Cloudify manager consists of the manager source code in addition to external components, plugins, modules and agent packages. Creating a file server reachable from the designated managers network and configuring these paths in the inputs file is all the configuring you need.
 
-## The resources
-Frist let us go through the resources and why we actually need them. 
-### Core resources
-Some of the resources needed are a part of the manager's core. Without them, different manager modules will simply fail to run. You can find these under the Cloudify Modules and External Componenets section. This resources are absolutley necessary for the cloudify manager to run correctly.
-### Agent packages 
-The agent packages are build on a per distro basis. provided with centos7, centos 6.5, Ubuntu trusy, Ubuntu Precise, RHEL and windows, these enable the cloudify agent to run on different distro.
-### Upload resources
-This sections differes from the others, by functionality. Any resource speicified in this section, is used for the deployments in the deployments process. For example, the hello_world_example imports the following:
+- **Core resources** - Some of the resources needed are a part of the manager's core. Without them, different manager modules will simply fail to run. You can find these under the Cloudify Modules and External Components section. This resources are absolutely necessary for the Cloudify manager to run correctly.
+- **Agent packages** - The agent packages are build on a per distro basis. provided with centos7, centos 6.5, Ubuntu trusy, Ubuntu Precise, RHEL and windows, these enable the Cloudify agent to run on different distro.
+- **Deployment resources** - This sections differs from the others, by functionality. Some blueprints require a resource via url, since you would work in an offline environment, this resource is missing.
+
+In order to resolve this issue, Cloudify manager starts up a file server on port 53229 which would hold any resource needed by any blueprint.
+Cloudify manager blueprint provides a simple api for uploading resources, and resolving resources paths:
+
+### Uploading resources
+Cloudify provides you with an easy way for uploading resources to the manager. In the following example you can see that an `upload_resource` section is comprised out of two 
+resource type: 
+ 
+#### Dsl resources
+The `dsl_resources` section enables you to upload any resource needed for the parsing of blueprints to the manager.
+#### Plugin resources
+This `plugin_resources` uses the new [plugins]({{< relref "plugins/overview/" >}}) api. Any path passed to this section
+is passed as a plugin to upload to the new plugins api. Further more, any remote url passed to this section
+is first downloaded to the local machine, and then uploaded via the plugins api.
+
 {{< gsHighlight  yaml  >}}
-  - http://www.getcloudify.org/spec/cloudify/3.3/types.yaml
-  - http://www.getcloudify.org/spec/openstack-plugin/1.3/plugin.yaml
-  - http://www.getcloudify.org/spec/diamond-plugin/1.3/plugin.yaml
+ upload_resources:
+   plugin_resources: 
+     - 'http://www.my-plugin.com/path/to/plugin.wgn'
+   dsl_resources: 
+     - 'source_path': 'http://www.my-plugin.com/path/to/plugin.yaml'
+       'destination_path': '/path/to/local/plugin.yaml'
 {{< /gsHighlight >}}
 
-each import is of yaml type. this enables the parsing of the hello_world blueprint. However, in an offline system these urls are not reachable. To solve this issue, the manager itself actually runs a file server on port 53229. 
-For additional info, please refer to the Upload_resources.
-#### dsl_resources
-The dsl_resources section enables you to upload any resource needed for the parsing of blueprints to the manager.
-#### plugin_resources
-This section actually holds the code for the plugin itself (in wagon type).
+### Resolving inputs
 
-# Bootstraping
-Once the file server is up and running, all you left to do is decomment any resource related lines in the inputs file, and change the url from the default url, to an url to the file server you've just populated.
+Cloudify uses the [Import resolver]({{< relref "blueprints/import-resolver.md" >}}) section in the manager blueprint, in order to translate any resource appears in the import section of the blueprint to a custom translation specified by the section. 
+For example, an `import_resolver` section might look something like this: 
+ {{< gsHighlight  yaml  >}}
+ import_resolver:
+   parameters:
+     rules:
+     - {'http://www.my-plugin.com/path': 'http://localhost:53229/path'}
+ {{< /gsHighlight >}}
+The rule basically specifies a mapping between the source address ('http://www.my-plugin.com/path') as the dictionary key, and the destination address ('http://localhost:53229/path') as the dictionary value.
+Once the manager parses the blueprint's `import` section, it first tries the new value supplied, if it fails it falls back to the original address. 
+For example, lets have a look on an import example:
 
-Once both stages are done, you would have a fully functioning cloudify manager. 
+{{< gsHighlight  yaml  >}}
+imports:
+  - http://www.my-plugin.com/path/to/plugin.yaml
+{{< /gsHighlight >}}
+
+Upon parsing the blueprint file, the manager tries to resolve each and every resource in the imports list according to the specified rules. In our example, the 
+url http://www.my-plugin.com/path/to/plugin.yaml would be first mapped to http://localhost:53229/path/to/local/plugin.yaml, and the manager would try to retrieve 
+the resource from the resolved url. If that fails, the manager would fall back to the original url.
