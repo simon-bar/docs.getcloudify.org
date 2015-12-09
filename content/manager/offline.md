@@ -1,3 +1,11 @@
+---
+layout: bt_wiki
+title: Advanced Blueprint Example
+category: Blueprints
+draft: false
+weight: 11000
+
+---
 # Offline Manager
 Deploying an offline manager is easy using cloyudify. Cloudify manager consists of the manager source code in addition to external components, plugins, modules and agent packages. Creating a file server reachable from the designated managers network and configuring these paths in the inputs file is all the configuring you need.
 
